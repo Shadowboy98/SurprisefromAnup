@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For You</title>
+    
+    <!-- External Libraries (Loaded via CDN for Single File Portability) -->
+    <!-- GSAP for High-End Animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <!-- Canvas Confetti for the Celebration -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;500;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* 
+         * CORE VARIABLES & RESET 
+         */
+        :root {
+            --bg-dark: #050507;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent-glow: 140, 100, 255; /* Purple/Blue vibe */
+            --accent-warm: 255, 120, 120; /* Rose Gold vibe */
+            --text-main: #ffffff;
+            --text-muted: #a0a0a0;
+            --font-display: 'Playfair Display', serif;
+            --font-body: 'Manrope', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            overflow: hidden; /* Prevent scrolling, we control the flow */
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 
+         * BACKGROUND FX 
+         */
+        .ambient-glow {
+            position: absolute;
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, rgba(var(--accent-glow), 0.15) 0%, rgba(0,0,0,0) 70%);
+            top: -20%;
+            left: -20%;
+            border-radius: 50%;
+            filter: blur(80px);
+            animation: float 20s infinite ease-in-out;
+            z-index: 0;
+        }
+
+        .ambient-glow.warm {
+            top: auto;
+            left: auto;
+            bottom: -20%;
+            right: -20%;
+            background: radial-gradient(circle, rgba(var(--accent-warm), 0.1) 0%, rgba(0,0,0,0) 70%);
+            animation: float 25s infinite ease-in-out reverse;
+        }
+
+        .noise-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTAgMGg0MDB2NDAweiIgZmlsbD0idXJsKCNhKSIvPjxmaWx0ZXIgaWQ9ImEiPjxmZVR1cmJ1bGVuY2UgdHlwZT0iZnJhY3RhbE5vaXNlIiBiYXNlRnJlcXVlbmN5PSIuODUiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48L3N2Zz4=');
+            opacity: 0.05;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(30px, 50px); }
+        }
+
+        /* 
+         * MAIN STAGE (GLASS CONTAINER) 
+         */
+        .stage-container {
+            position: relative;
+            z-index: 10;
+            width: 90%;
+            max-width: 500px;
+            height: 80vh; /* Mobile friendly */
+            max-height: 750px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 
+         * SLIDES SYSTEM 
+         */
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            padding: 2rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            opacity: 0;
+            visibility: hidden;
+            transform: scale(0.95) translateY(20px);
+            /* Transitions handled by GSAP */
+        }
+
+        .slide.active {
+            z-index: 2;
+        }
+
+        /* 
+         * TYPOGRAPHY 
+         */
+        h1, h2 {
+            font-family: var(--font-display);
+            font-weight: 400;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            color: #fff;
+        }
+
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; }
+        
+        p {
+            font-size: 1.05rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .highlight {
+            color: rgb(var(--accent-warm));
+            font-style: italic;
+        }
+
+        /* 
+         * INTERACTIVE ELEMENTS 
+         */
+        .btn-main {
+            padding: 1rem 2.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            font-family: var(--font-body);
+            font-size: 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-main:hover {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 20px rgba(var(--accent-glow), 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 1rem;
+        }
+
+        /* 
+         * SPECIFIC SLIDE STYLES 
+         */
+        
+        /* Intro Slide */
+        .pulse-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+        .pulse-circle::after {
+            content: '';
+            position: absolute;
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.5);
+            animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        /* Photo Gallery */
+        .photo-stack {
+    position: relative;
+    width: 220px;
+    height: 280px;
+    margin-bottom: 5.5rem;
+    transform: translateY(-10px); /* lifts photo cards up */
+}
+        .photo-card {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 4px solid white;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            transition: transform 0.5s ease;
+        }
+        .photo-card:nth-child(1) { transform: rotate(-6deg); z-index: 1; }
+        .photo-card:nth-child(2) { transform: rotate(4deg); z-index: 2; }
+        .photo-card:nth-child(3) { transform: rotate(-2deg); z-index: 3; }
+
+        /* The Map/Distance */
+        .distance-visual {
+            width: 100%;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+        .dot {
+            width: 12px; height: 12px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(255,255,255,0.8);
+        }
+        .line {
+            flex-grow: 1;
+            height: 1px;
+            background: rgba(255,255,255,0.2);
+            margin: 0 10px;
+            position: relative;
+        }
+        .plane-icon {
+            position: absolute;
+            top: 50%; left: 0;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        /* Proposal Slide */
+        .proposal-text {
+            font-size: 1.5rem;
+            margin-bottom: 3rem;
+            font-family: var(--font-display);
+        }
+
+        .btn-yes {
+            background: #fff;
+            color: #000;
+            font-weight: 700;
+        }
+        .btn-no {
+            font-size: 0.8rem;
+            opacity: 0.6;
+        }
+
+        /* Music Controls */
+        .music-control {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            color: rgba(255,255,255,0.3);
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        .music-control:hover { color: white; }
+
+        @keyframes ping {
+            75%, 100% { transform: scale(2); opacity: 0; }
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 480px) {
+            h1 { font-size: 2rem; }
+            .stage-container { width: 95%; height: 90vh; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background Elements -->
+    <div class="ambient-glow"></div>
+    <div class="ambient-glow warm"></div>
+    <div class="noise-overlay"></div>
+
+    <!-- Music Control Icon -->
+    <div class="music-control" onclick="toggleMusic()">
+        <i class="fas fa-music" id="music-icon"></i>
+    </div>
+
+    <!-- Hidden Audio Player -->
+    <!-- CUSTOMIZE: Replace 'music.mp3' with your audio file URL -->
+    <audio id="bg-music" loop>
+        <source src="file:///D:/IMPORTANT/8D%20music/Never%20regret%20In%20Love%20Mashup%203%20%20Chale%20Aana,%20Humnava%20Mere,%20O%20Soniye,%20Hua%20hain%20Aaj%20Pheli%20baar%20Mix%20Song-[AudioTrimmer.com].mp3" type="audio/mp3">
+    </audio>
+
+    <!-- Main Container -->
+    <div class="stage-container">
+
+        <!-- SLIDE 1: INTRO -->
+        <div class="slide" id="slide-1">
+            <div class="pulse-circle">
+                <i class="fas fa-heart" style="color: white;"></i>
+            </div>
+            <h1>Hey <span class="highlight">Priya</span>.</h1>
+            <p>You once asked me if I like someone..🤍<br>Yes I do, and you know her.</p>
+            <button class="btn-main" onclick="nextSlide(1)">Let’s find her together~</button>
+        </div>
+
+        <!-- SLIDE 2: THE DISTANCE -->
+        <div class="slide" id="slide-2">
+            <h2>The Quiet Distance My Soul Travels To Find Your Heart.</h2>
+            <div class="distance-visual">
+                <div class="dot"></div>
+                <div class="line">
+                    <i class="fas fa-plane plane-icon" id="plane"></i>
+                </div>
+                <div class="dot"></div>
+            </div>
+            <p>
+                <span id="distance-counter">914</span> km apart.<br>
+                Yet, you feel closer than anyone right here.
+            </p>
+            <button class="btn-main" onclick="nextSlide(2)">Wanna know about her..🤭</button>
+        </div>
+
+        <!-- SLIDE 3: MEMORIES -->
+        <div class="slide" id="slide-3">
+            <div class="photo-stack">
+                <!-- CUSTOMIZE: IMAGE GALLERY -->
+                <!-- Replace 'src' with your own image links -->
+                <img src="file:///D:/IMPORTANT/Image%20vidoes/nee.png" class="photo-card" alt="Memory 1">
+                <img src="file:///D:/IMPORTANT/Image%20vidoes/IMG_20260117_190306.jpg" class="photo-card" alt="Memory 2">
+                <img src="file:///D:/IMPORTANT/Image%20vidoes/IMG_20260117_204331.jpg" class="photo-card" alt="Memory 3">
+            </div>
+            <h2>My Obsession🌸💖~</h2>
+            <p>They may call it one-sided love, but your smile still lights up my whole world through the screen🌻</p>
+            <button class="btn-main" onclick="nextSlide(3)">The Reason.</button>
+        </div>
+
+        <!-- SLIDE 4: EMOTION -->
+        <div class="slide" id="slide-4">
+            <h1>well the Reason'</h1>
+            <p style="text-align: left; padding: 0 1rem;">
+                They say long distance is hard. And it is. <br><br>
+                But waiting for you? If my love is pure, I don’t need to rush time. I can wait, even if it takes a few more years, because what I feel for you is a journey. And when the time finally comes, I want my love to feel like home💕 <br><br>
+				Hope you remember this "Happy New Year, and yesss you are the best person I have met in 2025 or might be in my entire lifeeee...❤️✨ stay blessed and thanks..."
+            </p>
+            <button class="btn-main" onclick="nextSlide(4)">>>Final words</button>
+        </div>
+
+        <!-- SLIDE 5: THE PROPOSAL -->
+        <div class="slide" id="slide-5">
+            <h2>Will you be my favorite person for the rest of my life?</h2>
+            <p class="proposal-text">I fell for you without a reason, like the moon falls into the night and maybe that’s what the world calls love..🌹💖</p>
+            <!-- Or change to "Will you marry me?" / "Will you be my girlfriend?" --> 
+            
+            <div class="btn-group">
+                <button class="btn-main btn-yes" onclick="acceptProposal()">YES</button>
+                <button class="btn-main btn-no" id="btn-no" onmouseover="dodgeButton()">NO</button>
+            </div>
+        </div>
+
+        <!-- SLIDE 6: SUCCESS -->
+        <div class="slide" id="slide-6">
+            <i class="fas fa-infinity" style="font-size: 3rem; color: rgb(var(--accent-warm)); margin-bottom: 1rem;"></i>
+            <h1>It's a Date.</h1>
+            <p>I can’t wait to see you,<br>because I’ve fallen for you...reaaaaaaal:)<br>Aishiteru💗🌼</p>
+            <p style="font-size: 0.8rem; opacity: 0.5;">DM me with a snap</p>
+        </div>
+
+    </div>
+
+    <script>
+        // GSAP Setup
+        gsap.registerPlugin();
+
+        let currentSlide = 0;
+        const totalSlides = 6;
+        const audio = document.getElementById('bg-music');
+        
+        // Initialize First Slide
+        gsap.to("#slide-1", { duration: 1, autoAlpha: 1, scale: 1, y: 0, ease: "power3.out" });
+
+        function nextSlide(currentIndex) {
+            // Logic for Audio on Start
+            if(currentIndex === 1) {
+                audio.volume = 0.4;
+                audio.play().catch(e => console.log("Audio play failed interaction needed"));
+            }
+
+            const currentId = `#slide-${currentIndex}`;
+            const nextId = `#slide-${currentIndex + 1}`;
+
+            // Animate OUT current
+            gsap.to(currentId, {
+                duration: 0.8,
+                autoAlpha: 0,
+                y: -50,
+                scale: 0.9,
+                ease: "power2.in"
+            });
+
+            // Animate IN next
+            gsap.fromTo(nextId, 
+                { autoAlpha: 0, y: 50, scale: 0.9 },
+                { duration: 1, autoAlpha: 1, y: 0, scale: 1, ease: "power3.out", delay: 0.3 }
+            );
+
+            // Special Animation for Slide 2 (Plane)
+            if(currentIndex === 1) {
+                gsap.to("#plane", {
+                    left: "100%",
+                    duration: 3,
+                    ease: "power1.inOut",
+                    delay: 0.5
+                });
+                // Number Counter Effect
+                let distObj = { val: 2450 };
+                gsap.to(distObj, {
+                    val: 0,
+                    duration: 3,
+                    delay: 0.5,
+                    onUpdate: function() {
+                        document.getElementById("distance-counter").innerText = Math.floor(distObj.val);
+                    }
+                });
+            }
+
+            // Special Animation for Slide 3 (Photos)
+            if(currentIndex === 2) {
+    const tl = gsap.timeline({ delay: 1 });
+
+    tl.from(".photo-card:nth-child(1)", {
+        duration: 2,
+        y: 150,
+        opacity: 0,
+        ease: "power3.out"
+    })
+    .from(".photo-card:nth-child(2)", {
+        duration: 2,
+        y: 150,
+        opacity: 0,
+        ease: "power3.out"
+    }, "+=0.8")
+    .from(".photo-card:nth-child(3)", {
+        duration: 2,
+        y: 150,
+        opacity: 0,
+        ease: "power3.out"
+    }, "+=0.8");
+}
+        }
+
+        // The "No" Button Dodge Logic
+        function dodgeButton() {
+            const btn = document.getElementById('btn-no');
+            const x = (Math.random() - 0.5) * 200;
+            const y = (Math.random() - 0.5) * 200;
+            btn.style.transform = `translate(${x}px, ${y}px)`;
+        }
+
+        // Acceptance Logic
+        function acceptProposal() {
+            nextSlide(5);
+            fireConfetti();
+        }
+
+        // Confetti Effect
+        function fireConfetti() {
+            const duration = 3 * 1000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 999 };
+
+            function randomInOut(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+
+            const interval = setInterval(function() {
+                const timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                const particleCount = 50 * (timeLeft / duration);
+                
+                // Since particles fall down, start a bit higher than random
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInOut(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInOut(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+
+        // Music Toggle
+        function toggleMusic() {
+            const icon = document.getElementById('music-icon');
+            if(audio.paused) {
+                audio.play();
+                icon.className = 'fas fa-music';
+                icon.style.opacity = '1';
+            } else {
+                audio.pause();
+                icon.className = 'fas fa-volume-mute';
+                icon.style.opacity = '0.5';
+            }
+        }
+    </script>
+</body>
+</html>
